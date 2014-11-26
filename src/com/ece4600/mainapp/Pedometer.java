@@ -1,27 +1,28 @@
 package com.ece4600.mainapp;
 
-import com.ece4600.mainapp.R;
-
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
-import android.os.Vibrator;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
-//import android.widget.Toast;
 import android.widget.Toast;
 
 public class Pedometer extends Activity implements SensorEventListener{
+	private boolean countdown_flag = false;
 	private float lastX = 0, lastY = 0, lastZ = 0;
 	private float X = 0, Y = 0, Z = 0;
 	private SensorManager sensorManager;
@@ -33,24 +34,29 @@ public class Pedometer extends Activity implements SensorEventListener{
 	private float deltaY = 0;
 	private float deltaZ = 0;
 	private float test = 0;
+	private float MaxX = 0, xoldvalue = 0,MaxY = 0, yoldvalue = 0, MaxZ = 0, zoldvalue = 0;
 	private int stepnum = 0, i = 0, xp = 0, yp = 0, zp = 0, xn = 0, yn = 0, zn = 0, iteration = 500;
-	private TextView currentX, currentY, currentZ, maxX, maxY, maxZ, step;
-	public Vibrator v;
-	Button reset, returnbutton;
+	private TextView currentX, currentY, currentZ, maxX, maxY, maxZ, step;	
+	Button reset, returnbutton, start, stop;
+    private float LastStepDetection = 0;
+    private float StepDetectionDelta = 3500;
+    private double DifferenceDelta = 1.0;
+    private double minPeak = 3.0;
 
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_pedometer);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		initializeViews();
 		reset = (Button)findViewById(R.id.pedo_reset);
 		returnbutton = (Button)findViewById(R.id.returnpedo);
+		start = (Button)findViewById(R.id.pedo_start);
+		stop = (Button)findViewById(R.id.pedo_stop);
 		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 		if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
 			// success! we have an accelerometer
-			accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-			sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
 			} else {
    				final Toast toast = Toast.makeText(getApplicationContext(), "Do not have Accelerometer", Toast.LENGTH_SHORT);
    			    toast.show();
@@ -116,6 +122,17 @@ public class Pedometer extends Activity implements SensorEventListener{
 	
 	public void onClick(View v) {
 		switch (v.getId()) {
+		case R.id.pedo_start: 
+			countdowndisplay();
+			if (countdown_flag ==  true){
+				accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+				sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+				countdown_flag = false;
+			}
+			break;
+		case R.id.pedo_stop:
+			onPause();
+			break;
 		case R.id.returnpedo:
 			startActivity(new Intent(Pedometer.this, MainActivity.class));
 			finish();
@@ -140,6 +157,9 @@ public class Pedometer extends Activity implements SensorEventListener{
 			xn = 0;
 			yn = 0;
 			zn = 0;
+			MaxX = 0;
+			MaxY = 0;
+			MaxZ = 0;
 			iteration = 500;
 			stepnum = 0;
 			currentX.setText("0.0");
@@ -155,6 +175,26 @@ public class Pedometer extends Activity implements SensorEventListener{
 		}
 	}
 	
+	private void countdowndisplay() {
+		final AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+		alertDialog.setMessage("00:10");
+		alertDialog.show();  
+		
+		new CountDownTimer(10000, 1000) {
+		    public void onTick(long millisUntilFinished) {
+		       alertDialog.setMessage("00:"+ (millisUntilFinished/1000));
+		    }
+
+		    @Override
+		    public void onFinish() {
+		    	alertDialog.setMessage("Completed");
+		    	alertDialog.dismiss();
+		    	countdown_flag = true;
+		    }
+		}.start();
+		
+	}
+
 	public void onBackPressed() {
 		// do something on back.return;		
 		startActivity(new Intent(Pedometer.this, MainActivity.class));
@@ -194,23 +234,28 @@ public class Pedometer extends Activity implements SensorEventListener{
         }
         return true; 
 	}
-
+	
 	@Override
 	public void onSensorChanged(SensorEvent event) {
+
 		// display the current x,y,z accelerometer values
 		displayCurrentValues();
 		// display the max x,y,z accelerometer values
 		displayMaxValues();
 		// get the change of the x,y,z values of the accelerometer
-		deltaX = Math.abs(event.values[0]) - Math.abs(lastX);
-		deltaY = Math.abs(event.values[1]) - Math.abs(lastY);
-		deltaZ = Math.abs(event.values[2]) - Math.abs(lastZ);
+		deltaX = event.values[0] - lastX;
+		deltaY = event.values[1] - lastY;
+		deltaZ = event.values[2] - lastZ;
 		//get the current values of x,y,z axis of the accelerometer
 		X = event.values[0];
 		Y = event.values[1];
 		Z = event.values[2];
+//		Double vector = Math.sqrt(X * X + Y * Y + Z * Z);
+//		double average = (Math.abs(X)+Math.abs(Y)+Math.abs(Z))/3;
+        float time = System.currentTimeMillis();
+		float delta = time - LastStepDetection;
 		test = Math.max(Math.abs(X), Math.max(Math.abs(Y), Math.abs(Z)));
-		// if the change is below 1, it is just plain noise
+		// if the change is below 1.5, it is just plain noise
 		if ((deltaX < 1.5) && (deltaY < 1.5) && (deltaZ < 1.5)){
 			deltaX = 0;
 			deltaY = 0;
@@ -230,50 +275,80 @@ public class Pedometer extends Activity implements SensorEventListener{
 		case 1:
 			if (deltaX > 0){
 				xp++;
-			}else if(xp > 5){
+				MaxX = Math.max(MaxX, Math.max(Math.abs(X), xoldvalue));
+			}else if(xp > 2){
 				if (deltaX < 0){
 					xn++;
-					if (xn > 5){
+					if (xn > 1 && delta > StepDetectionDelta && MaxX - Math.abs(X) > minPeak){
 						stepnum++;
 						step.setText(Integer.toString(stepnum));
 						iteration++;
 						xp = 0;
 						xn = 0;
+						MaxX = 0;
 					}
 				}
 			}
+			xoldvalue = Math.abs(X);
+			Log.i("Pedometer", "Step detected Xaxis" + stepnum + "time" + time);
+//			if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
+//	        	LastStepDetection = time;
+//	        	stepnum++;
+//	            step.setText(Long.toString(delta));
+//	            iteration++;
+//	        }
 			break;
 		case 2:
 			if (deltaY > 0){
 				yp++;
-			}else if(yp > 5){
+				MaxY = Math.max(MaxY, Math.max(Math.abs(Y), yoldvalue));
+			}else if(yp > 2){
 				if (deltaY < 0){
 					yn++;
-					if (yn > 5){
+					if (yn > 1 && delta > StepDetectionDelta && MaxY - Math.abs(Y) > minPeak){
 						stepnum++;
 						step.setText(Integer.toString(stepnum));
 						iteration++;
 						yp = 0;
 						yn = 0;
+						MaxY = 0;
 					}
 				}
 			}
+			yoldvalue = Math.abs(Y);
+			Log.i("Pedometer", "Step detected Yaxis " + stepnum + "time" + time);
+//			if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
+//	        	LastStepDetection = time;
+//	        	stepnum++;
+//	            step.setText(Long.toString(delta)); 
+//	            iteration++;
+//	        }
 			break;
 		case 3:
 			if (deltaZ > 0){
 				zp++;
-			}else if(zp > 5){
+				MaxZ = Math.max(MaxZ, Math.max(Math.abs(Z), zoldvalue));
+			}else if(zp > 2){
 				if (deltaZ < 0){
 					zn++;
-					if (zn > 5){
+					if (zn > 1 && delta > StepDetectionDelta  && MaxZ - Math.abs(Z) > minPeak){
 						stepnum++;
 						step.setText(Integer.toString(stepnum));
 						iteration++;
 						zp = 0;
 						zn = 0;
+						MaxZ = 0;
 					}
 				}
 			}
+			zoldvalue = Math.abs(Z);
+			Log.i("Pedometer", "Step detected Zaxis " + stepnum + "time" + time);
+//			if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
+//	        	LastStepDetection = time;
+//	        	stepnum++;
+//	            step.setText(Long.toString(delta));
+//	            iteration++;
+//	        }
 			break;
 		default:
 			break;				

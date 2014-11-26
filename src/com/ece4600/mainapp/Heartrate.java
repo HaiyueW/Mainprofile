@@ -3,6 +3,7 @@ package com.ece4600.mainapp;
 import org.achartengine.GraphicalView;
 
 import com.ece4600.mainapp.R;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;

@@ -74,5 +74,7 @@
     <string name="pedo_step">Step detection</string>
     <string name="pedo_stepnum">0.0</string>
     <string name="pedo_reset">Reset</string>
+    <string name="pedo_start">Start</string>
+    <string name="pedo_stop">Stop</string>
 
 </resources>
