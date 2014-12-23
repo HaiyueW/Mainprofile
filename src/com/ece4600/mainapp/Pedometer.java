@@ -3,7 +3,6 @@ package com.ece4600.mainapp;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -22,7 +21,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class Pedometer extends Activity implements SensorEventListener{
-	private boolean countdown_flag = false;
+	private boolean startflag = false;
 	private float lastX = 0, lastY = 0, lastZ = 0;
 	private float X = 0, Y = 0, Z = 0;
 	private SensorManager sensorManager;
@@ -56,6 +55,8 @@ public class Pedometer extends Activity implements SensorEventListener{
 		stop = (Button)findViewById(R.id.pedo_stop);
 		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 		if (sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
+			accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+			sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
 			// success! we have an accelerometer
 			} else {
    				final Toast toast = Toast.makeText(getApplicationContext(), "Do not have Accelerometer", Toast.LENGTH_SHORT);
@@ -67,7 +68,8 @@ public class Pedometer extends Activity implements SensorEventListener{
    			               toast.cancel(); 
    			           }
    			    }, 500);
-				}
+   			        }
+		
 	}
 	
 	public void initializeViews() {
@@ -83,12 +85,14 @@ public class Pedometer extends Activity implements SensorEventListener{
 	//onResume() register the accelerometer for listening the events
 	protected void onResume() {
 		super.onResume();
+		Toast.makeText(getBaseContext(), "onResume Accelerometer Started", Toast.LENGTH_SHORT).show();
 		sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
 		}
 	
 	//onPause() unregister the accelerometer for stop listening the events
 	protected void onPause() {
 		super.onPause();
+		Toast.makeText(getBaseContext(), "onPause Accelerometer Started", Toast.LENGTH_SHORT).show();
 		sensorManager.unregisterListener(this);
 		}
 	
@@ -123,15 +127,12 @@ public class Pedometer extends Activity implements SensorEventListener{
 	public void onClick(View v) {
 		switch (v.getId()) {
 		case R.id.pedo_start: 
-			countdowndisplay();
-			if (countdown_flag ==  true){
-				accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-				sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
-				countdown_flag = false;
-			}
+			onResume();
+			countdowndisplay();			
 			break;
 		case R.id.pedo_stop:
 			onPause();
+			startflag = false;
 			break;
 		case R.id.returnpedo:
 			startActivity(new Intent(Pedometer.this, MainActivity.class));
@@ -189,10 +190,9 @@ public class Pedometer extends Activity implements SensorEventListener{
 		    public void onFinish() {
 		    	alertDialog.setMessage("Completed");
 		    	alertDialog.dismiss();
-		    	countdown_flag = true;
+		    	startflag = true;
 		    }
 		}.start();
-		
 	}
 
 	public void onBackPressed() {
@@ -237,126 +237,128 @@ public class Pedometer extends Activity implements SensorEventListener{
 	
 	@Override
 	public void onSensorChanged(SensorEvent event) {
+		if(startflag == true){
+			// display the current x,y,z accelerometer values
+			displayCurrentValues();
+			// display the max x,y,z accelerometer values
+			displayMaxValues();
+			// get the change of the x,y,z values of the accelerometer
+			deltaX = event.values[0] - lastX;
+			deltaY = event.values[1] - lastY;
+			deltaZ = event.values[2] - lastZ;
+			//get the current values of x,y,z axis of the accelerometer
+			X = event.values[0];
+			Y = event.values[1];
+			Z = event.values[2];
+//			Double vector = Math.sqrt(X * X + Y * Y + Z * Z);
+//			double average = (Math.abs(X)+Math.abs(Y)+Math.abs(Z))/3;
+	        float time = System.currentTimeMillis();
+			float delta = time - LastStepDetection;
+			test = Math.max(Math.abs(X), Math.max(Math.abs(Y), Math.abs(Z)));
+			// if the change is below 1.5, it is just plain noise
+			if ((deltaX < 1.5) && (deltaY < 1.5) && (deltaZ < 1.5)){
+				deltaX = 0;
+				deltaY = 0;
+				deltaZ = 0; 
+			}else if (iteration == 500){
+				iteration  = 0;
+				if ((test == Math.abs(X)) && (test > 1.5)){
+					i = 1;
+				}else if ((test == Math.abs(Y)) && (test > 1.5)){
+					i = 2;
+				}else if ((test == Math.abs(Z)) && (test > 1.5)){
+					i = 3;
+					}
+				}
 
-		// display the current x,y,z accelerometer values
-		displayCurrentValues();
-		// display the max x,y,z accelerometer values
-		displayMaxValues();
-		// get the change of the x,y,z values of the accelerometer
-		deltaX = event.values[0] - lastX;
-		deltaY = event.values[1] - lastY;
-		deltaZ = event.values[2] - lastZ;
-		//get the current values of x,y,z axis of the accelerometer
-		X = event.values[0];
-		Y = event.values[1];
-		Z = event.values[2];
-//		Double vector = Math.sqrt(X * X + Y * Y + Z * Z);
-//		double average = (Math.abs(X)+Math.abs(Y)+Math.abs(Z))/3;
-        float time = System.currentTimeMillis();
-		float delta = time - LastStepDetection;
-		test = Math.max(Math.abs(X), Math.max(Math.abs(Y), Math.abs(Z)));
-		// if the change is below 1.5, it is just plain noise
-		if ((deltaX < 1.5) && (deltaY < 1.5) && (deltaZ < 1.5)){
-			deltaX = 0;
-			deltaY = 0;
-			deltaZ = 0; 
-		}else if (iteration == 500){
-			iteration  = 0;
-			if ((test == Math.abs(X)) && (test > 1.5)){
-				i = 1;
-			}else if ((test == Math.abs(Y)) && (test > 1.5)){
-				i = 2;
-			}else if ((test == Math.abs(Z)) && (test > 1.5)){
-				i = 3;
+			switch(i){
+			case 1:
+				if (deltaX > 0){
+					xp++;
+					MaxX = Math.max(MaxX, Math.max(Math.abs(X), xoldvalue));
+				}else if(xp > 2){
+					if (deltaX < 0){
+						xn++;
+						if (xn > 1 && delta > StepDetectionDelta && MaxX - Math.abs(X) > minPeak){
+							stepnum++;
+							step.setText(Integer.toString(stepnum));
+							iteration++;
+							xp = 0;
+							xn = 0;
+							MaxX = 0;
+						}
+					}
 				}
+				xoldvalue = Math.abs(X);
+				Log.i("Pedometer", "Step detected Xaxis" + stepnum + "time" + time);
+//				if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
+//		        	LastStepDetection = time;
+//		        	stepnum++;
+//		            step.setText(Long.toString(delta));
+//		            iteration++;
+//		        }
+				break;
+			case 2:
+				if (deltaY > 0){
+					yp++;
+					MaxY = Math.max(MaxY, Math.max(Math.abs(Y), yoldvalue));
+				}else if(yp > 2){
+					if (deltaY < 0){
+						yn++;
+						if (yn > 1 && delta > StepDetectionDelta && MaxY - Math.abs(Y) > minPeak){
+							stepnum++;
+							step.setText(Integer.toString(stepnum));
+							iteration++;
+							yp = 0;
+							yn = 0;
+							MaxY = 0;
+						}
+					}
+				}
+				yoldvalue = Math.abs(Y);
+				Log.i("Pedometer", "Step detected Yaxis " + stepnum + "time" + time);
+//				if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
+//		        	LastStepDetection = time;
+//		        	stepnum++;
+//		            step.setText(Long.toString(delta)); 
+//		            iteration++;
+//		        }
+				break;
+			case 3:
+				if (deltaZ > 0){
+					zp++;
+					MaxZ = Math.max(MaxZ, Math.max(Math.abs(Z), zoldvalue));
+				}else if(zp > 2){
+					if (deltaZ < 0){
+						zn++;
+						if (zn > 1 && delta > StepDetectionDelta  && MaxZ - Math.abs(Z) > minPeak){
+							stepnum++;
+							step.setText(Integer.toString(stepnum));
+							iteration++;
+							zp = 0;
+							zn = 0;
+							MaxZ = 0;
+						}
+					}
+				}
+				zoldvalue = Math.abs(Z);
+				Log.i("Pedometer", "Step detected Zaxis " + stepnum + "time" + time);
+//				if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
+//		        	LastStepDetection = time;
+//		        	stepnum++;
+//		            step.setText(Long.toString(delta));
+//		            iteration++;
+//		        }
+				break;
+			default:
+				break;				
 			}
+			// set the last know values of x,y,z
+			lastX = event.values[0];
+			lastY = event.values[1];
+			lastZ = event.values[2];
 
-		switch(i){
-		case 1:
-			if (deltaX > 0){
-				xp++;
-				MaxX = Math.max(MaxX, Math.max(Math.abs(X), xoldvalue));
-			}else if(xp > 2){
-				if (deltaX < 0){
-					xn++;
-					if (xn > 1 && delta > StepDetectionDelta && MaxX - Math.abs(X) > minPeak){
-						stepnum++;
-						step.setText(Integer.toString(stepnum));
-						iteration++;
-						xp = 0;
-						xn = 0;
-						MaxX = 0;
-					}
-				}
-			}
-			xoldvalue = Math.abs(X);
-			Log.i("Pedometer", "Step detected Xaxis" + stepnum + "time" + time);
-//			if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
-//	        	LastStepDetection = time;
-//	        	stepnum++;
-//	            step.setText(Long.toString(delta));
-//	            iteration++;
-//	        }
-			break;
-		case 2:
-			if (deltaY > 0){
-				yp++;
-				MaxY = Math.max(MaxY, Math.max(Math.abs(Y), yoldvalue));
-			}else if(yp > 2){
-				if (deltaY < 0){
-					yn++;
-					if (yn > 1 && delta > StepDetectionDelta && MaxY - Math.abs(Y) > minPeak){
-						stepnum++;
-						step.setText(Integer.toString(stepnum));
-						iteration++;
-						yp = 0;
-						yn = 0;
-						MaxY = 0;
-					}
-				}
-			}
-			yoldvalue = Math.abs(Y);
-			Log.i("Pedometer", "Step detected Yaxis " + stepnum + "time" + time);
-//			if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
-//	        	LastStepDetection = time;
-//	        	stepnum++;
-//	            step.setText(Long.toString(delta)); 
-//	            iteration++;
-//	        }
-			break;
-		case 3:
-			if (deltaZ > 0){
-				zp++;
-				MaxZ = Math.max(MaxZ, Math.max(Math.abs(Z), zoldvalue));
-			}else if(zp > 2){
-				if (deltaZ < 0){
-					zn++;
-					if (zn > 1 && delta > StepDetectionDelta  && MaxZ - Math.abs(Z) > minPeak){
-						stepnum++;
-						step.setText(Integer.toString(stepnum));
-						iteration++;
-						zp = 0;
-						zn = 0;
-						MaxZ = 0;
-					}
-				}
-			}
-			zoldvalue = Math.abs(Z);
-			Log.i("Pedometer", "Step detected Zaxis " + stepnum + "time" + time);
-//			if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
-//	        	LastStepDetection = time;
-//	        	stepnum++;
-//	            step.setText(Long.toString(delta));
-//	            iteration++;
-//	        }
-			break;
-		default:
-			break;				
 		}
-		// set the last know values of x,y,z
-		lastX = event.values[0];
-		lastY = event.values[1];
-		lastZ = event.values[2];
+		}
 
-	}
 }
