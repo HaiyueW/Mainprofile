@@ -85,14 +85,12 @@ public class Pedometer extends Activity implements SensorEventListener{
 	//onResume() register the accelerometer for listening the events
 	protected void onResume() {
 		super.onResume();
-		Toast.makeText(getBaseContext(), "onResume Accelerometer Started", Toast.LENGTH_SHORT).show();
 		sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
 		}
 	
 	//onPause() unregister the accelerometer for stop listening the events
 	protected void onPause() {
 		super.onPause();
-		Toast.makeText(getBaseContext(), "onPause Accelerometer Started", Toast.LENGTH_SHORT).show();
 		sensorManager.unregisterListener(this);
 		}
 	
