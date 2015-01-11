@@ -40,7 +40,7 @@ public class Pedometer extends Activity implements SensorEventListener{
 	private TextView currentX, currentY, currentZ, maxX, maxY, maxZ, step, speed;	
 	Button reset, returnbutton, start, stop;
     private long LastStepDetection = 0;
-    private float StepDetectionDelta =  0, speednum = 0;
+    private float StepDetectionDelta =  0;
     private double DifferenceDelta = 1.0;
     private double minPeak = 3.0;
 
@@ -82,7 +82,6 @@ public class Pedometer extends Activity implements SensorEventListener{
 		maxY = (TextView) findViewById(R.id.pedo_accymax);
 		maxZ = (TextView) findViewById(R.id.pedo_acczmax);
 		step = (TextView) findViewById(R.id.pedo_stepnum);
-		speed = (TextView) findViewById(R.id.pedo_speednum);
 		}
 
 	//onResume() register the accelerometer for listening the events
@@ -164,7 +163,6 @@ public class Pedometer extends Activity implements SensorEventListener{
 			MaxZ = 0;
 			iteration = 500;
 			stepnum = 0;
-			speednum = 0;
 			currentX.setText("0.0");
 			currentY.setText("0.0");
 			currentZ.setText("0.0");
@@ -172,7 +170,6 @@ public class Pedometer extends Activity implements SensorEventListener{
 			maxY.setText("0.0");
 			maxZ.setText("0.0");
 			step.setText("0.0");
-			speed.setText("0.0");
 			break;
 		default:
 			break;
@@ -255,10 +252,8 @@ public class Pedometer extends Activity implements SensorEventListener{
 			Z = event.values[2];
 //			Double vector = Math.sqrt(X * X + Y * Y + Z * Z);
 //			double average = (Math.abs(X)+Math.abs(Y)+Math.abs(Z))/3;
-	        long times = System.currentTimeMillis();
-	        long time = times;
+	        long time = System.currentTimeMillis();
 			long delta = time - LastStepDetection;
-	        long timeSeconds = TimeUnit.MILLISECONDS.toSeconds(delta);
 			test = Math.max(Math.abs(X), Math.max(Math.abs(Y), Math.abs(Z)));
 			// if the change is below 1.5, it is just plain noise
 			if ((deltaX < 1.5) && (deltaY < 1.5) && (deltaZ < 1.5)){
@@ -288,8 +283,6 @@ public class Pedometer extends Activity implements SensorEventListener{
 							LastStepDetection = time;
 							stepnum++;
 							step.setText(Integer.toString(stepnum));
-							speednum = stepnum/timeSeconds;
-							speed.setText(Float.toString(speednum));
 							iteration++;
 							xp = 0;
 							xn = 0;
@@ -298,7 +291,7 @@ public class Pedometer extends Activity implements SensorEventListener{
 					}
 				}
 				xoldvalue = Math.abs(X);
-				Log.i("Pedometer", "Step detected Xaxis" + stepnum + "Delta time" + timeSeconds + "Speed" + speednum );
+				Log.i("Pedometer", "Step detected Xaxis" + stepnum + "Delta time" + time);
 //				if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
 //		        	LastStepDetection = time;
 //		        	stepnum++;
@@ -317,8 +310,6 @@ public class Pedometer extends Activity implements SensorEventListener{
 							LastStepDetection = time;
 							stepnum++;
 							step.setText(Integer.toString(stepnum));
-							speednum = stepnum/timeSeconds;
-							speed.setText(Float.toString(speednum));
 							iteration++;
 							yp = 0;
 							yn = 0;
@@ -327,7 +318,7 @@ public class Pedometer extends Activity implements SensorEventListener{
 					}
 				}
 				yoldvalue = Math.abs(Y);
-				Log.i("Pedometer", "Step detected Yaxis " + stepnum + "Delta time" + timeSeconds + "Speed" + speednum );
+				Log.i("Pedometer", "Step detected Yaxis " + stepnum + "Delta time" + time);
 //				if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
 //		        	LastStepDetection = time;
 //		        	stepnum++;
@@ -346,8 +337,6 @@ public class Pedometer extends Activity implements SensorEventListener{
 							LastStepDetection = time;
 							stepnum++;
 							step.setText(Integer.toString(stepnum));
-							speednum = stepnum/timeSeconds;
-							speed.setText(Float.toString(speednum));
 							iteration++;
 							zp = 0;
 							zn = 0;
@@ -356,7 +345,7 @@ public class Pedometer extends Activity implements SensorEventListener{
 					}
 				}
 				zoldvalue = Math.abs(Z);
-				Log.i("Pedometer", "Step detected Zaxis " + stepnum + "Delta time" + timeSeconds + "Speed" + speednum );
+				Log.i("Pedometer", "Step detected Zaxis " + stepnum + "Delta time" + time);
 //				if (vector - average > DifferenceDelta && delta > StepDetectionDelta && minPeak < vector) {
 //		        	LastStepDetection = time;
 //		        	stepnum++;
